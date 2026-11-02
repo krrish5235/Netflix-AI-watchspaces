@@ -1,0 +1,202 @@
+{
+  "version": 1,
+  "source": "README.md",
+  "scenes": [
+    {
+      "id": "orientation",
+      "label": "01 / ORIENTATION",
+      "type": "hero",
+      "tag": "BACKEND SYSTEM / STATIC SHOWCASE",
+      "title": "Social Watch Space API",
+      "dek": "A Java 17 / Spring Boot 3.3 backend for authenticated rooms, live room events, and timeline questions with citations.",
+      "note": "This is a presentation layer for the backend project. The repository intentionally has no production frontend.",
+      "stats": [
+        { "label": "RUNTIME", "value": "JAVA 17" },
+        { "label": "FRAMEWORK", "value": "SPRING BOOT 3.3" },
+        { "label": "LATEST CHECK", "value": "95 TESTS" }
+      ],
+      "visual": {
+        "label": "SYSTEM / 0.1.0-SNAPSHOT",
+        "layers": ["API CONTRACTS", "ROOM STATE", "EVENT TRANSPORT"],
+        "code": ["POST /api/v1/watch-spaces", "GET  /api/v1/timeline", "WS   /api/v1/ws/..." ]
+      }
+    },
+    {
+      "id": "problem",
+      "label": "02 / THE PROBLEM",
+      "type": "problem",
+      "tag": "WHY THIS SERVICE EXISTS",
+      "title": "Shared viewing needs a source of truth.",
+      "dek": "A watch room needs more than a player: it needs identity, membership, host decisions, room events, and enough timeline context to answer questions responsibly.",
+      "cards": [
+        { "index": "01", "title": "IDENTITY", "text": "Know who is allowed to create, join, and act inside a room." },
+        { "index": "02", "title": "ROOM BOUNDARY", "text": "Keep membership and host ownership on the server, across REST and WebSocket paths." },
+        { "index": "03", "title": "CONTEXT", "text": "Retrieve the nearby timeline and show which source events support an answer." }
+      ],
+      "callout": "The implemented slice establishes these contracts. It does not claim synchronized playback is finished."
+    },
+    {
+      "id": "architecture",
+      "label": "03 / ARCHITECTURE",
+      "type": "architecture",
+      "tag": "A SMALL SERVICE WITH CLEAR EDGES",
+      "title": "One backend. Five responsibilities.",
+      "dek": "The service is organized into API contracts, domain state, application services, security, and transport adapters.",
+      "layers": [
+        { "name": "API CONTRACTS", "detail": "HTTP controllers · request / response records", "accent": "cyan" },
+        { "name": "DOMAIN STATE", "detail": "Watch Space · user · lifecycle status", "accent": "blue" },
+        { "name": "APPLICATION SERVICES", "detail": "Auth · room rules · grounded questions", "accent": "violet" },
+        { "name": "SECURITY", "detail": "Spring Security · JWT filters · ownership checks", "accent": "pink" },
+        { "name": "TRANSPORT ADAPTERS", "detail": "WebFlux HTTP · typed WebSocket protocol · JDBC", "accent": "cyan" }
+      ],
+      "footer": "Blocking JDBC work is kept off reactive event-loop threads; reads return detached snapshots rather than mutable cached rooms.",
+      "flow": ["HTTP / WS", "SERVICE RULES", "JDBC + FLYWAY"]
+    },
+    {
+      "id": "auth",
+      "label": "04 / IDENTITY",
+      "type": "auth",
+      "tag": "AUTHENTICATION ≠ OWNERSHIP",
+      "title": "Identity is a token. Ownership is a room fact.",
+      "dek": "Register, log in, and refresh JWT access tokens. Then let the room's server-side hostUserId authorize host operations.",
+      "steps": [
+        { "number": "01", "title": "REGISTER / LOGIN", "detail": "Creates a VIEWER account and issues access + refresh tokens." },
+        { "number": "02", "title": "BEARER TOKEN", "detail": "Authenticated API calls carry Authorization: Bearer <token>." },
+        { "number": "03", "title": "ROOM CHECK", "detail": "Membership and hostUserId are checked for the specific room." }
+      ],
+      "guards": [
+        "A global VIEWER role is not trusted as room ownership.",
+        "A client cannot promote itself by changing a JWT claim or request body.",
+        "WebSocket query-string tokens are rejected; the upgrade uses an Authorization header."
+      ]
+    },
+    {
+      "id": "lifecycle",
+      "label": "05 / ROOM LIFECYCLE",
+      "type": "lifecycle",
+      "tag": "ROOMS ARE STATE MACHINES",
+      "title": "Create. Join. Start. Lock. End.",
+      "dek": "The host can move a room through its lifecycle, while membership operations remain explicit and server-authorized.",
+      "phases": [
+        { "name": "CREATE", "detail": "Authenticated creator becomes the room host." },
+        { "name": "JOIN", "detail": "Join by room id or secure invite code." },
+        { "name": "START", "detail": "Host starts a room after membership checks." },
+        { "name": "LOCK", "detail": "Host controls whether new joins are accepted." },
+        { "name": "END", "detail": "Host ends the room; later access is rejected." }
+      ],
+      "sideActions": [
+        { "label": "MEMBERSHIP", "value": "LEAVE / REMOVE" },
+        { "label": "OWNERSHIP", "value": "TRANSFER HOST" },
+        { "label": "FAILURE", "value": "FORBIDDEN / CONFLICT" }
+      ],
+      "callout": "Invalid transitions return a conflict. Non-members receive forbidden. Host operations use the room's hostUserId."
+    },
+    {
+      "id": "events",
+      "label": "06 / ROOM EVENTS",
+      "type": "events",
+      "tag": "TYPED WEBSOCKET PROTOCOL",
+      "title": "Room events move through a typed gate.",
+      "dek": "Authenticated clients connect to /api/v1/ws/watch-spaces/{id}, join first, then exchange validated JSON events.",
+      "events": [
+        { "name": "join", "kind": "presence" },
+        { "name": "chat", "kind": "message" },
+        { "name": "ping", "kind": "health" },
+        { "name": "play", "kind": "host only" },
+        { "name": "pause", "kind": "host only" },
+        { "name": "seek", "kind": "host only" },
+        { "name": "leave", "kind": "presence" }
+      ],
+      "checks": [
+        "Closed set of typed events",
+        "Bounded payloads, request ids, chat, and seek values",
+        "Stable error events for malformed messages",
+        "64-message queue per connection; slow overflow closes with 1013"
+      ],
+      "truth": "The registry is process-local. WebSockets forward commands, but do not maintain synchronized playback state, an authoritative clock, replay, or reconnect resynchronization."
+    },
+    {
+      "id": "persistence",
+      "label": "07 / PERSISTENCE",
+      "type": "persistence",
+      "tag": "ROOM MEMORY, WRITTEN DOWN",
+      "title": "PostgreSQL is the default profile's durable edge.",
+      "dek": "Accounts, rooms, participants, titles, and timeline events are stored through JDBC. Flyway owns the schema history.",
+      "migrations": [
+        { "version": "V1", "title": "INITIAL SCHEMA", "detail": "Accounts · watch spaces · participants" },
+        { "version": "V2", "title": "TITLES + TIMELINE", "detail": "Seeded fictional demo timeline" }
+      ],
+      "properties": [
+        "Room mutations use database row locks and transactions.",
+        "Reads return detached snapshots, not mutable cached rooms.",
+        "Tests use isolated H2 databases in PostgreSQL mode; a native PostgreSQL server check is still open."
+      ],
+      "database": "POSTGRESQL 14+",
+      "wire": ["JDBC STORES", "FLYWAY V1 → V2", "PERSISTENCE PATH"]
+    },
+    {
+      "id": "grounded-ai",
+      "label": "08 / TIMELINE AI",
+      "type": "ai",
+      "tag": "GROUNDED QUESTION PATH",
+      "title": "Ask the timeline. Show the evidence.",
+      "dek": "The seeded demo-title timeline can answer membership-protected questions with excerpts and source-event citations.",
+      "question": "Who is Detective Rios?",
+      "answer": "Returns answer text, confidence, generatedAt, and source-event citations.",
+      "citations": [
+        { "id": "EVENT ID", "source": "SOURCE LABEL", "time": "EXCERPT" },
+        { "id": "EVENT ID", "source": "SOURCE LABEL", "time": "EXCERPT" }
+      ],
+      "retrieval": [
+        "Deterministic keyword retrieval, not a live Gemini model",
+        "With a position, search the preceding 120 seconds — never future events",
+        "Up to three citations, confidence, and generatedAt are returned",
+        "No matching event returns an insufficient-context response"
+      ],
+      "disclosure": "Confidence is an uncalibrated heuristic, not a probability. Gemini environment settings are reserved and currently unused."
+    },
+    {
+      "id": "proof-and-gaps",
+      "label": "09 / PROOF + GAPS",
+      "type": "proof",
+      "tag": "VERIFICATION WITH THE EDGES VISIBLE",
+      "title": "A tested slice, honestly framed.",
+      "dek": "The latest combined Maven check records the implemented behavior. The remaining gaps are part of the project story, not hidden behind the demo.",
+      "testSummary": {
+        "number": "95",
+        "label": "TESTS",
+        "result": "0 failures · 0 errors · 0 skipped",
+        "date": "LATEST COMBINED CHECK / 2026-10-21"
+      },
+      "coverage": [
+        "HTTP registration, create / join, and host authorization",
+        "Room transitions and concurrent capacity",
+        "JDBC rollback / read-back, migration, and timeline filtering",
+        "Citation retrieval and real multi-client WebSocket tests",
+        "Blocking work stays off reactive event-loop threads"
+      ],
+      "gaps": [
+        "Native PostgreSQL verification, Docker exercise, load / latency benchmark",
+        "Authoritative playback, drift correction, reconnect snapshots, cross-instance fan-out",
+        "Refresh rotation / revocation, rate limiting, admin enforcement, and observability",
+        "Validated admin timeline ingestion and a real grounded model integration"
+      ]
+    },
+    {
+      "id": "close",
+      "label": "10 / CLOSE",
+      "type": "close",
+      "tag": "THE BACKEND SLICE",
+      "title": "A clean boundary between what works and what comes next.",
+      "dek": "The project has a concrete room protocol, durable persistence path, and cited timeline retrieval — with production hardening still named plainly.",
+      "summary": [
+        { "label": "NOW", "value": "AUTHENTICATED ROOMS" },
+        { "label": "NOW", "value": "TYPED LIVE EVENTS" },
+        { "label": "NOW", "value": "CITED TIMELINE ANSWERS" },
+        { "label": "NEXT", "value": "AUTHORITATIVE PLAYBACK" }
+      ],
+      "footer": "Static local presentation · no API calls · no production frontend · claims sourced from README.md",
+      "cta": "Use the controls to replay the system map"
+    }
+  ]
+}

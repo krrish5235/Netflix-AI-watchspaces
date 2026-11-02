@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#070b18">
+    <meta name="description" content="A cinematic, static showcase of the Social Watch Space API backend.">
+    <title>Social Watch Space API — System Showcase</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <div class="app-shell">
+      <div class="ambient ambient-one" aria-hidden="true"></div>
+      <div class="ambient ambient-two" aria-hidden="true"></div>
+      <div class="particles" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="grain" aria-hidden="true"></div>
+
+      <header class="topbar" aria-label="Showcase header">
+        <a class="brand" href="#presentation" aria-label="Social Watch Space API showcase home">
+          <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+          <span class="brand-copy">
+            <span class="brand-kicker">OMNIRUSH / SYSTEMS AT A GLANCE</span>
+            <strong>WATCH SPACE <em>API</em></strong>
+          </span>
+        </a>
+        <div class="topbar-status">
+          <span class="static-pill"><span class="status-dot"></span>STATIC SHOWCASE</span>
+          <span class="scene-counter" id="sceneCounter">01 / 10</span>
+        </div>
+      </header>
+
+      <main id="presentation" class="presentation" aria-label="Backend system presentation">
+        <section class="stage-wrap">
+          <div class="stage-glow" aria-hidden="true"></div>
+          <div class="stage" id="stage" aria-live="polite" aria-atomic="true">
+            <div class="loading-state">
+              <span class="loading-orbit" aria-hidden="true"></span>
+              <p>Loading system map…</p>
+            </div>
+          </div>
+        </section>
+        <noscript><p class="no-script-fallback">This presentation needs JavaScript for scene controls. The source copy is available in <code>scenes.json</code>.</p></noscript>
+      </main>
+
+      <footer class="control-deck" aria-label="Presentation controls">
+        <div class="transport-controls">
+          <button class="icon-button" id="previousButton" type="button" aria-label="Previous scene" title="Previous scene (Left arrow)">←</button>
+          <button class="play-button" id="playButton" type="button" aria-label="Pause autoplay" title="Pause or play (Space)">
+            <span class="play-icon" aria-hidden="true">Ⅱ</span>
+          </button>
+          <button class="icon-button" id="nextButton" type="button" aria-label="Next scene" title="Next scene (Right arrow)">→</button>
+        </div>
+        <div class="progress-area">
+          <div class="progress-meta">
+            <span id="sceneLabel">Loading scene</span>
+            <span class="progress-time" id="progressTime">AUTO / 07.6s</span>
+          </div>
+          <div class="progress-track" role="progressbar" aria-label="Showcase progress" aria-valuemin="1" aria-valuemax="10" aria-valuenow="1" aria-valuetext="Scene 1 of 10">
+            <span class="progress-fill" id="progressFill"></span>
+          </div>
+          <div class="scene-dots" id="sceneDots" role="tablist" aria-label="Choose a scene"></div>
+        </div>
+        <div class="keyboard-hint" aria-label="Keyboard controls">
+          <span class="key">SPACE</span><span>play / pause</span>
+          <span class="key">← →</span><span>navigate</span>
+          <span class="key">HOME / END</span>
+        </div>
+      </footer>
+    </div>
+    <div class="sr-only" id="srStatus" aria-live="polite"></div>
+    <script src="app.js"></script>
+  </body>
+</html>
